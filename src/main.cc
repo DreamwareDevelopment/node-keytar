@@ -3,6 +3,87 @@
 
 namespace {
 
+NAN_METHOD(SetSecret) {
+  if (!info[0]->IsString()) {
+    Nan::ThrowTypeError("Parameter 'service' must be a string");
+    return;
+  }
+
+  Nan::Utf8String serviceNan(info[0]);
+  std::string service(*serviceNan, serviceNan.length());
+
+  if (!info[1]->IsString()) {
+    Nan::ThrowTypeError("Parameter 'account' must be a string");
+    return;
+  }
+
+  Nan::Utf8String accountNan(info[1]);
+  std::string account(*accountNan, accountNan.length());
+
+  if (!info[2]->IsString()) {
+    Nan::ThrowTypeError("Parameter 'secret' must be a string");
+    return;
+  }
+
+  Nan::Utf8String secretNan(info[2]);
+  std::string secret(*secretNan, secretNan.length());
+
+  SetSecretWorker* worker = new SetSecretWorker(
+    service,
+    account,
+    secret,
+    new Nan::Callback(info[3].As<v8::Function>()));
+  Nan::AsyncQueueWorker(worker);
+}
+
+NAN_METHOD(GetSecret) {
+  if (!info[0]->IsString()) {
+    Nan::ThrowTypeError("Parameter 'service' must be a string");
+    return;
+  }
+
+  Nan::Utf8String serviceNan(info[0]);
+  std::string service(*serviceNan, serviceNan.length());
+
+  if (!info[1]->IsString()) {
+    Nan::ThrowTypeError("Parameter 'account' must be a string");
+    return;
+  }
+
+  Nan::Utf8String accountNan(info[1]);
+  std::string account(*accountNan, accountNan.length());
+
+  GetSecretWorker* worker = new GetSecretWorker(
+    service,
+    account,
+    new Nan::Callback(info[2].As<v8::Function>()));
+  Nan::AsyncQueueWorker(worker);
+}
+
+NAN_METHOD(DeleteSecret) {
+  if (!info[0]->IsString()) {
+    Nan::ThrowTypeError("Parameter 'service' must be a string");
+    return;
+  }
+
+  Nan::Utf8String serviceNan(info[0]);
+  std::string service(*serviceNan, serviceNan.length());
+
+  if (!info[1]->IsString()) {
+    Nan::ThrowTypeError("Parameter 'account' must be a string");
+    return;
+  }
+
+  Nan::Utf8String accountNan(info[1]);
+  std::string account(*accountNan, accountNan.length());
+
+  DeleteSecretWorker* worker = new DeleteSecretWorker(
+    service,
+    account,
+    new Nan::Callback(info[2].As<v8::Function>()));
+  Nan::AsyncQueueWorker(worker);
+}
+
 NAN_METHOD(SetPassword) {
   if (!info[0]->IsString()) {
     Nan::ThrowTypeError("Parameter 'service' must be a string");
@@ -115,6 +196,9 @@ NAN_METHOD(FindCredentials) {
 }
 
 NAN_MODULE_INIT(Init) {
+  Nan::SetMethod(target, "getSecret", GetSecret);
+  Nan::SetMethod(target, "setSecret", SetSecret);
+  Nan::SetMethod(target, "deleteSecret", DeleteSecret);
   Nan::SetMethod(target, "getPassword", GetPassword);
   Nan::SetMethod(target, "setPassword", SetPassword);
   Nan::SetMethod(target, "deletePassword", DeletePassword);

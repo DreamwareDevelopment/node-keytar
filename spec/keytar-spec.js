@@ -15,16 +15,130 @@ describe("keytar", function() {
   }
 
   beforeEach(async function() {
-    await keytar.deletePassword(service, account),
+    await keytar.deleteSecret(service, account)
+    await keytar.deleteSecret(service, account2)
+    await keytar.deleteSecret(service2, account)
+    await keytar.deleteSecret(service2, account2)
+    await keytar.deletePassword(service, account)
     await keytar.deletePassword(service, account2)
     await keytar.deletePassword(service2, account)
+    await keytar.deletePassword(service2, account2)
 
   })
 
   afterEach(async function() {
-    await keytar.deletePassword(service, account),
+    await keytar.deleteSecret(service, account)
+    await keytar.deleteSecret(service, account2)
+    await keytar.deleteSecret(service2, account)
+    await keytar.deleteSecret(service2, account2)
+    await keytar.deletePassword(service, account)
     await keytar.deletePassword(service, account2)
     await keytar.deletePassword(service2, account)
+    await keytar.deletePassword(service2, account2)
+  })
+
+  describe("setSecret/getSecret(service, account)", function () {
+    it("sets and yields the secret for the service and account", async function () {
+      await keytar.setSecret(service, account, password)
+      assert.equal(await keytar.getSecret(service, account), password)
+      await keytar.setSecret(service2, account2, password2)
+      assert.equal(await keytar.getSecret(service2, account2), password2)
+    })
+
+    it("yields null when the secret was not found", async function () {
+      assert.equal(await keytar.getSecret(service, account2), null)
+    })
+
+    describe("error handling", function () {
+      describe('setSecret', () => {
+        it("handles when an object is provided for service", async function () {
+          try {
+            await keytar.setSecret(object, account, password)
+          } catch (err) {
+            assert.equal(err.message, "Parameter 'service' must be a string")
+          }
+        })
+
+        it("handles when an object is provided for account", async function () {
+          try {
+            await keytar.setSecret(service, object, password)
+          } catch (err) {
+            assert.equal(err.message, "Parameter 'account' must be a string")
+          }
+        })
+
+        it("handles when an object is provided for secret", async function () {
+          try {
+            await keytar.setSecret(service, account, object)
+          } catch (err) {
+            assert.equal(err.message, "Parameter 'secret' must be a string")
+          }
+        })
+      })
+
+      describe('getSecret', () => {
+        it("handles when an object is provided for service", async function () {
+          try {
+            await keytar.getSecret(object, account)
+          } catch (err) {
+            assert.equal(err.message, "Parameter 'service' must be a string")
+          }
+        })
+
+        it("handles when an object is provided for account", async function () {
+          try {
+            await keytar.getSecret(service, object)
+          } catch (err) {
+            assert.equal(err.message, "Parameter 'account' must be a string")
+          }
+        })
+      })
+    })
+
+    describe("Unicode support", function () {
+      const service = "se®vi\u00C7e"
+      const account = "shi\u0191\u2020ke\u00A5"
+      const password = "p\u00E5ssw\u00D8®\u2202"
+
+      it("handles unicode strings everywhere", async function () {
+        await keytar.setSecret(service, account, password)
+        assert.equal(await keytar.getSecret(service, account), password)
+      })
+
+      afterEach(async function () {
+        await keytar.deleteSecret(service, account)
+      })
+    })
+  })
+
+  describe("deleteSecret(service, account)", function () {
+    it("yields true when the secret was deleted", async function () {
+      await keytar.setSecret(service, account, password)
+      const res = await keytar.deleteSecret(service, account)
+      assert.equal(res, true)
+    })
+
+    it("yields false when the secret didn't exist", async function () {
+      assert.equal(await keytar.deleteSecret(service, account), false)
+    })
+
+    describe("error handling", function () {
+      it("handles when an object is provided for service", async function () {
+        try {
+          await keytar.deleteSecret(object, account)
+        } catch (err) {
+          assert.equal(err.message, "Parameter 'service' must be a string")
+        }
+      })
+
+      it("handles when an object is provided for account", async function () {
+        try {
+          await keytar.deleteSecret(service, object)
+        } catch (err) {
+          assert.equal(err.message, "Parameter 'account' must be a string")
+        }
+      })
+    })
   })
 
   describe("setPassword/getPassword(service, account)", function() {

@@ -38,6 +38,16 @@ const std::string CFStringToStdString(CFStringRef cfstring) {
   return stdstring;
 }
 
+/**
+ * Converts a std::string to a CFString
+ */
+CFStringRef StdStringToCFString(std::string stdstring) {
+  const char* cstr = stdstring.c_str();
+  CFStringRef cfString;
+  cfString = CFStringCreateWithCString(NULL, cstr, kCFStringEncodingUTF8);
+  return cfString;
+}
+
 const std::string errorStatusToString(OSStatus status) {
   std::string errorStr;
   CFStringRef errorMessageString = SecCopyErrorMessageString(status, NULL);
@@ -52,6 +62,224 @@ const std::string errorStatusToString(OSStatus status) {
 
   CFRelease(errorMessageString);
   return errorStr;
+}
+
+KEYTAR_OP_RESULT UpdateSecret(const std::string& service,
+                           const std::string& account,
+                           const std::string& secret,
+                           std::string* error) {
+  CFStringRef serviceStr = StdStringToCFString(service);
+  CFRetain(serviceStr);
+  CFStringRef accountStr = StdStringToCFString(account);
+  CFRetain(accountStr);
+  CFStringRef secretStr = StdStringToCFString(secret);
+  CFRetain(secretStr);
+
+  CFStringRef queryKeys[3];
+  CFStringRef queryValues[3];
+  queryKeys[0] = kSecClass;
+  queryKeys[1] = kSecAttrServer;
+  queryKeys[2] = kSecAttrAccount;
+  queryValues[0] = kSecClassInternetPassword;
+  queryValues[1] = serviceStr;
+  queryValues[2] = accountStr;
+
+  CFDictionaryRef query = CFDictionaryCreate(
+    NULL,
+    (const void **)queryKeys,
+    (const void **)queryValues,
+    3,
+    &kCFCopyStringDictionaryKeyCallBacks,
+    &kCFTypeDictionaryValueCallBacks);
+  CFRetain(query);
+  CFRelease(serviceStr);
+  CFRelease(accountStr);
+
+  CFDataRef secretData = CFStringCreateExternalRepresentation(
+    NULL,
+    secretStr,
+    kCFStringEncodingUTF8,
+    0);
+  CFRelease(secretStr);
+  CFStringRef attributeKeys[1];
+  CFTypeRef attributeValues[1];
+  attributeKeys[0] = kSecValueData;
+  attributeValues[0] = secretData;
+
+  CFDictionaryRef attributes = CFDictionaryCreate(
+    NULL,
+    (const void **)attributeKeys,
+    (const void **)attributeValues,
+    2,
+    &kCFCopyStringDictionaryKeyCallBacks,
+    &kCFTypeDictionaryValueCallBacks);
+  CFRetain(attributes);
+  OSStatus status = SecItemUpdate(query, attributes);
+  CFRelease(attributes);
+  CFRelease(query);
+  if (status == errSecItemNotFound) {
+    return FAIL_NONFATAL;
+  } else if (status != errSecSuccess) {
+    *error = errorStatusToString(status);
+    return FAIL_ERROR;
+  }
+  return SUCCESS;
+}
+
+KEYTAR_OP_RESULT AddSecret(const std::string& service,
+                           const std::string& account,
+                           const std::string& secret,
+                           std::string* error) {
+  CFStringRef serviceStr = StdStringToCFString(service);
+  CFRetain(serviceStr);
+  CFStringRef accountStr = StdStringToCFString(account);
+  CFRetain(accountStr);
+  CFStringRef secretStr = StdStringToCFString(secret);
+  CFRetain(secretStr);
+  CFDataRef secretData = CFStringCreateExternalRepresentation(
+    NULL,
+    secretStr,
+    kCFStringEncodingUTF8,
+    0);
+  CFRelease(secretStr);
+
+  CFStringRef keys[4];
+  CFTypeRef values[4];
+  keys[0] = kSecClass;
+  keys[1] = kSecAttrServer;
+  keys[2] = kSecAttrAccount;
+  keys[3] = kSecValueData;
+  values[0] = kSecClassInternetPassword;
+  values[1] = serviceStr;
+  values[2] = accountStr;
+  values[3] = secretData;
+
+  CFDictionaryRef attributes = CFDictionaryCreate(
+    NULL,
+    (const void **)keys,
+    (const void **)values,
+    4,
+    &kCFCopyStringDictionaryKeyCallBacks,
+    &kCFTypeDictionaryValueCallBacks);
+  CFRetain(attributes);
+  CFRelease(serviceStr);
+  CFRelease(accountStr);
+  CFTypeRef result;
+  OSStatus status = SecItemAdd(attributes, &result);
+  CFRelease(attributes);
+  if (status != errSecSuccess) {
+    *error = errorStatusToString(status);
+    return FAIL_ERROR;
+  }
+  return SUCCESS;
+}
+
+KEYTAR_OP_RESULT SetSecret(const std::string& service,
+                           const std::string& account,
+                           const std::string& secret,
+                           std::string* error) {
+  KEYTAR_OP_RESULT result = UpdateSecret(service, account, secret, error);
+  if (result == FAIL_NONFATAL) {
+    // This secret doesn't exist, add a new secret
+    return AddSecret(service, account, secret, error);
+  } else if (result == FAIL_ERROR) {
+    return FAIL_ERROR;
+  }
+  return SUCCESS;
+}
+
+KEYTAR_OP_RESULT GetSecret(const std::string& service,
+                             const std::string& account,
+                             std::string* secret,
+                             std::string* error) {
+  CFStringRef serviceStr = StdStringToCFString(service);
+  CFRetain(serviceStr);
+  CFStringRef accountStr = StdStringToCFString(account);
+  CFRetain(accountStr);
+
+  CFStringRef keys[5];
+  CFTypeRef values[5];
+  keys[0] = kSecClass;
+  keys[1] = kSecAttrServer;
+  keys[2] = kSecAttrAccount;
+  keys[3] = kSecMatchLimit;
+  keys[4] = kSecReturnData;
+  values[0] = kSecClassInternetPassword;
+  values[1] = serviceStr;
+  values[2] = accountStr;
+  values[3] = kSecMatchLimitOne;
+  values[4] = kCFBooleanTrue;
+
+  CFDictionaryRef query = CFDictionaryCreate(
+    NULL,
+    (const void **)keys,
+    (const void **)values,
+    5,
+    &kCFCopyStringDictionaryKeyCallBacks,
+    &kCFTypeDictionaryValueCallBacks);
+  CFRetain(query);
+  CFRelease(serviceStr);
+  CFRelease(accountStr);
+  CFTypeRef item;
+  OSStatus status = SecItemCopyMatching(query, &item);
+  CFRelease(query);
+
+  if (status == errSecItemNotFound) {
+    return FAIL_NONFATAL;
+  } else if (status != errSecSuccess) {
+    *error = errorStatusToString(status);
+    return FAIL_ERROR;
+  }
+
+  CFStringRef result = CFStringCreateFromExternalRepresentation(
+    NULL,
+    (CFDataRef) item,
+    kCFStringEncodingUTF8);
+  CFRelease(item);
+  const std::string stdResult = CFStringToStdString(result);
+  CFRelease(result);
+  *secret = stdResult;
+  return SUCCESS;
+}
+
+KEYTAR_OP_RESULT DeleteSecret(const std::string& service,
+                                const std::string& account,
+                                std::string* error) {
+  CFStringRef serviceStr = StdStringToCFString(service);
+  CFRetain(serviceStr);
+  CFStringRef accountStr = StdStringToCFString(account);
+  CFRetain(accountStr);
+  CFStringRef queryKeys[3];
+  CFStringRef queryValues[3];
+  queryKeys[0] = kSecClass;
+  queryKeys[1] = kSecAttrServer;
+  queryKeys[2] = kSecAttrAccount;
+  queryValues[0] = kSecClassInternetPassword;
+  queryValues[1] = serviceStr;
+  queryValues[2] = accountStr;
+
+  CFDictionaryRef query;
+  query = CFDictionaryCreate(
+    NULL,
+    (const void **)queryKeys,
+    (const void **)queryValues,
+    3,
+    &kCFCopyStringDictionaryKeyCallBacks,
+    &kCFTypeDictionaryValueCallBacks);
+
+  OSStatus status = SecItemDelete(query);
+  CFRelease(query);
+  if (status == errSecItemNotFound) {
+    return FAIL_NONFATAL;
+  }
+  if (status == errSecSuccess) {
+    return SUCCESS;
+  }
+  CFStringRef errMsg = SecCopyErrorMessageString(status, NULL);
+  CFRetain(errMsg);
+  *error = CFStringToStdString(errMsg);
+  CFRelease(errMsg);
+  return FAIL_ERROR;
 }
 
 KEYTAR_OP_RESULT AddPassword(const std::string& service,

@@ -7,6 +7,103 @@
 
 using keytar::KEYTAR_OP_RESULT;
 
+SetSecretWorker::SetSecretWorker(
+  const std::string& service,
+  const std::string& account,
+  const std::string& secret,
+  Nan::Callback* callback
+) : AsyncWorker(callback),
+    service(service),
+    account(account),
+    secret(secret) {}
+
+SetSecretWorker::~SetSecretWorker() {}
+
+void SetSecretWorker::Execute() {
+  std::string error;
+  KEYTAR_OP_RESULT result = keytar::SetSecret(service,
+                                                account,
+                                                secret,
+                                                &error);
+  if (result == keytar::FAIL_ERROR) {
+    SetErrorMessage(error.c_str());
+  }
+}
+
+GetSecretWorker::GetSecretWorker(
+  const std::string& service,
+  const std::string& account,
+  Nan::Callback* callback
+) : AsyncWorker(callback),
+    service(service),
+    account(account) {}
+
+GetSecretWorker::~GetSecretWorker() {}
+
+void GetSecretWorker::Execute() {
+  std::string error;
+  KEYTAR_OP_RESULT result = keytar::GetSecret(service,
+                                                account,
+                                                &secret,
+                                                &error);
+  if (result == keytar::FAIL_ERROR) {
+    SetErrorMessage(error.c_str());
+  } else if (result == keytar::FAIL_NONFATAL) {
+    success = false;
+  } else {
+    success = true;
+  }
+}
+
+void GetSecretWorker::HandleOKCallback() {
+  Nan::HandleScope scope;
+  v8::Local<v8::Value> val = Nan::Null();
+  if (success) {
+    val = Nan::New<v8::String>(secret.data(),
+                               secret.length()).ToLocalChecked();
+  }
+  v8::Local<v8::Value> argv[] = {
+    Nan::Null(),
+    val
+  };
+
+  callback->Call(2, argv, async_resource);
+}
+
+DeleteSecretWorker::DeleteSecretWorker(
+  const std::string& service,
+  const std::string& account,
+  Nan::Callback* callback
+) : AsyncWorker(callback),
+    service(service),
+    account(account) {}
+
+DeleteSecretWorker::~DeleteSecretWorker() {}
+
+void DeleteSecretWorker::Execute() {
+  std::string error;
+  KEYTAR_OP_RESULT result = keytar::DeleteSecret(service, account, &error);
+  if (result == keytar::FAIL_ERROR) {
+    SetErrorMessage(error.c_str());
+  } else if (result == keytar::FAIL_NONFATAL) {
+    success = false;
+  } else {
+    success = true;
+  }
+}
+
+void DeleteSecretWorker::HandleOKCallback() {
+  Nan::HandleScope scope;
+  v8::Local<v8::Boolean> val =
+    Nan::New<v8::Boolean>(success);
+  v8::Local<v8::Value> argv[] = {
+    Nan::Null(),
+    val
+  };
+
+  callback->Call(2, argv, async_resource);
+}
+
 SetPasswordWorker::SetPasswordWorker(
   const std::string& service,
   const std::string& account,

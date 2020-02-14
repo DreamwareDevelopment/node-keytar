@@ -14,6 +14,20 @@ enum KEYTAR_OP_RESULT {
   FAIL_NONFATAL
 };
 
+KEYTAR_OP_RESULT SetSecret(const std::string& service,
+                             const std::string& account,
+                             const std::string& secret,
+                             std::string* error);
+
+KEYTAR_OP_RESULT GetSecret(const std::string& service,
+                             const std::string& account,
+                             std::string* secret,
+                             std::string* error);
+
+KEYTAR_OP_RESULT DeleteSecret(const std::string& service,
+                                const std::string& account,
+                                std::string* error);
+
 KEYTAR_OP_RESULT SetPassword(const std::string& service,
                              const std::string& account,
                              const std::string& password,

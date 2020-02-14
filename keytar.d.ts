@@ -2,6 +2,37 @@
 // Adapted from DefinitelyTyped: https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/keytar/index.d.ts
 
 /**
+ * Get the stored secret for the service and account.
+ *
+ * @param service The string service name.
+ * @param account The string account name.
+ *
+ * @returns A promise for the secret string.
+ */
+export declare function getSecret(service: string, account: string): Promise<string | null>;
+
+/**
+ * Add the secret for the service and account to the keychain.
+ *
+ * @param service The string service name.
+ * @param account The string account name.
+ * @param secret The string secret.
+ *
+ * @returns A promise for the set secret completion.
+ */
+export declare function setSecret(service: string, account: string, secret: string): Promise<void>;
+
+/**
+ * Delete the stored secret for the service and account.
+ *
+ * @param service The string service name.
+ * @param account The string account name.
+ *
+ * @returns A promise for the deletion status. True on success.
+ */
+export declare function deleteSecret(service: string, account: string): Promise<boolean>;
+
+/**
  * Get the stored password for the service and account.
  *
  * @param service The string service name.

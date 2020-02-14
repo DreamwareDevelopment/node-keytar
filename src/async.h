@@ -6,6 +6,52 @@
 
 #include "credentials.h"
 
+class SetSecretWorker : public Nan::AsyncWorker {
+  public:
+    SetSecretWorker(const std::string& service, const std::string& account, const std::string& secret,
+                      Nan::Callback* callback);
+
+    ~SetSecretWorker();
+
+    void Execute();
+
+  private:
+    const std::string service;
+    const std::string account;
+    const std::string secret;
+};
+
+class GetSecretWorker : public Nan::AsyncWorker {
+  public:
+    GetSecretWorker(const std::string& service, const std::string& account, Nan::Callback* callback);
+
+    ~GetSecretWorker();
+
+    void Execute();
+    void HandleOKCallback();
+
+  private:
+    const std::string service;
+    const std::string account;
+    std::string secret;
+    bool success;
+};
+
+class DeleteSecretWorker : public Nan::AsyncWorker {
+  public:
+    DeleteSecretWorker(const std::string& service, const std::string& account, Nan::Callback* callback);
+
+    ~DeleteSecretWorker();
+
+    void Execute();
+    void HandleOKCallback();
+
+  private:
+    const std::string service;
+    const std::string account;
+    bool success;
+};
+
 class SetPasswordWorker : public Nan::AsyncWorker {
   public:
     SetPasswordWorker(const std::string& service, const std::string& account, const std::string& password,
