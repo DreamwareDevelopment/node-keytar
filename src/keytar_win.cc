@@ -113,6 +113,26 @@ std::string getErrorMessage(DWORD errorCode) {
   return errMsg;
 }
 
+KEYTAR_OP_RESULT SetSecret(const std::string& service,
+                             const std::string& account,
+                             const std::string& secret,
+                             std::string* error) {
+  return SetPassword(service, account, secret, error);
+}
+
+KEYTAR_OP_RESULT GetSecret(const std::string& service,
+                             const std::string& account,
+                             std::string* secret,
+                             std::string* error) {
+  return GetPassword(service, account, secret, error);
+}
+
+KEYTAR_OP_RESULT DeleteSecret(const std::string& service,
+                                const std::string& account,
+                                std::string* error) {
+  return DeletePassword(service, account, error);
+}
+
 KEYTAR_OP_RESULT SetPassword(const std::string& service,
                  const std::string& account,
                  const std::string& password,
