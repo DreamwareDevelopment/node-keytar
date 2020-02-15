@@ -7,7 +7,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/atom/node-keytar.git"
+    "url": "https://github.com/DreamwareDevelopment/node-keytar.git"
   },
   "bugs": {
     "url": "https://github.com/atom/node-keytar/issues"
